@@ -1,7 +1,7 @@
 numpy
 pillow
-tensorflow==2.14.0
-tflite-runtime==2.14.0
+tensorflow-cpu
+#tflite-runtime==2.14.0
 opencv-python
 picamera2
 

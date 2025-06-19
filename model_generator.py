@@ -1,12 +1,10 @@
 import tensorflow as tf
 from tensorflow.keras import layers, callbacks, optimizers
-import matplotlib.pyplot as plt
-import os
 
-# ===== 1. Data Loading & Augmentation =====
 IMG_SIZE = 128
 BATCH_SIZE = 64
 
+# 1. Data Loading & Augmentation
 train_ds = tf.keras.utils.image_dataset_from_directory(
     "data",
     labels="inferred",
@@ -40,7 +38,7 @@ train_ds = train_ds.map(lambda x, y: (augmentation(x, training=True), y))
 train_ds = train_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
 val_ds = val_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
 
-# ===== 2. Model Architecture =====
+# 2. Model Architecture
 model = tf.keras.Sequential([
     layers.Conv2D(32, (3, 3), activation='relu', input_shape=(IMG_SIZE, IMG_SIZE, 3)),
     layers.MaxPooling2D(2, 2),
@@ -64,7 +62,7 @@ early_stop = callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_be
 reduce_lr = callbacks.ReduceLROnPlateau(factor=0.2, patience=5)
 checkpoint = callbacks.ModelCheckpoint('best_model.h5', save_best_only=True)
 
-# ===== 3. Training =====
+# 3. Training
 history = model.fit(
     train_ds,
     validation_data=val_ds,
@@ -72,15 +70,8 @@ history = model.fit(
     callbacks=[early_stop, reduce_lr, checkpoint]
 )
 
-# ===== 4. Plot Training History =====
-plt.plot(history.history['accuracy'], label='train_accuracy')
-plt.plot(history.history['val_accuracy'], label='val_accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.savefig('training_history.png')
-
-# ===== 5. Export to TFLite =====
+# 4. Export to TFLite
+import os
 os.makedirs('model', exist_ok=True)
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
@@ -92,4 +83,3 @@ model.save('./model/full_model.h5')
 print('Model training complete. Saved:')
 print('- model/model_quant.tflite (for Pi)')
 print('- model/full_model.h5 (for further training)')
-print('- training_history.png (accuracy plot)')
