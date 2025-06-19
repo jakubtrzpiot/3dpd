@@ -53,7 +53,7 @@ history = model.fit(
 # 4. Convert to TensorFlow Lite
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 tflite_model = converter.convert()
-with open('model_quant.tflite', 'wb') as f:
+with open('./model/model_quant.tflite', 'wb') as f:
     f.write(tflite_model)
 
 print('Model trained and saved as model_quant.tflite')
