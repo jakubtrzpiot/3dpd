@@ -2,10 +2,9 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 import libcamera
-import tflite_runtime.interpreter as tflite
+import tensorflow as tf
 
-# === 1. Load TFLite model ===
-interpreter = tflite.Interpreter(model_path="model/model_quant.tflite")
+interpreter = tf.lite.Interpreter(model_path="model/model_quant.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
