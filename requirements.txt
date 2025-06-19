@@ -1,9 +1,4 @@
-# Core ML and camera libraries
 tflite-runtime
-opencv-python==4.4.0.46
-picamera2
+tensorflow
 numpy
 pillow
-
-# Optional libraries for additional functionality
-matplotlib
