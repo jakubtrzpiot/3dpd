@@ -1,4 +1,4 @@
 .venv/
 data/
-model/full_model.h5
-best_model.h5
+model/*.h5
+*.h5
