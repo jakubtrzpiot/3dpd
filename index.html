@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>YOLO Defect Detection - Dokumentacja z kodem</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: #f8f9fa; color: #222; }
+        .container { max-width: 980px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px #0001; padding: 32px 40px; }
+        h1, h2, h3 { color: #2471A3; }
+        h1 { font-size: 2.2em; border-bottom: 2px solid #2471A3; padding-bottom: 0.2em; }
+        h2 { margin-top: 2em; }
+        code, pre { background: #f3f3f3; border-radius: 5px; padding: 2px 6px; font-size: 1em; }
+        pre { padding: 12px; overflow-x: auto; }
+        ul, ol { margin-bottom: 1.2em; }
+        .section { margin-bottom: 2.5em; }
+        .filetree { font-family: 'Fira Mono', 'Consolas', monospace; background: #f3f3f3; padding: 12px; border-radius: 5px; }
+        .footer { text-align: center; margin-top: 40px; color: #888; font-size: 0.95em; }
+        a { color: #2471A3; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .explanation { background: #eaf6fb; border-left: 4px solid #2471A3; margin-bottom: 1em; padding: 10px 18px; }
+        .code-title { font-weight: bold; color: #1b4f72; margin-top: 1.2em; }
+        @media (max-width: 600px) {
+            .container { padding: 16px 4vw; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YOLO - Detekcja Defektów na Raspberry Pi</h1>
+
+        <div class="section">
+            <h2>Opis projektu</h2>
+            <p>
+                Projekt umożliwia wykrywanie defektów na obrazach w czasie rzeczywistym z wykorzystaniem kamery Raspberry Pi oraz modeli detekcji obiektów YOLO (You Only Look Once).
+                System pozwala na trenowanie własnych modeli na bazie własnych zdjęć oraz uruchamianie detekcji na urządzeniu typu edge (Raspberry Pi 4/5), wyświetlając wyniki z wizualizacją wykrytych obiektów i defektów.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Główne funkcje</h2>
+            <ul>
+                <li><b>Trenowanie modelu YOLO</b> – przygotowanie i wytrenowanie własnego modelu detekcji obiektów na podstawie własnych zdjęć z defektami i bez defektów.</li>
+                <li><b>Eksport modelu</b> – eksport wytrenowanego modelu do formatu umożliwiającego szybkie uruchamianie na Raspberry Pi (np. NCNN lub PyTorch <code>.pt</code>).</li>
+                <li><b>Wykrywanie w czasie rzeczywistym</b> – pobieranie obrazu z kamery, detekcja obiektów i wizualizacja wyników (ramki wokół obiektów, wyróżnienie defektów innym kolorem).</li>
+                <li><b>Przyjazny kod</b> – łatwy do uruchomienia i modyfikacji, z czytelnym podziałem na część trenującą i detekcyjną.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Struktura projektu</h2>
+            <pre class="filetree">.
+├── model_generator_yolo.py   # Skrypt do trenowania i eksportu modelu YOLO
+├── main_yolo.py              # Skrypt do uruchamiania detekcji na żywo
+├── data.yaml                 # Plik konfiguracyjny YOLO z opisem klas i ścieżek
+└── dataset/
+    ├── images/
+    │   ├── train/
+    │   └── val/
+    └── labels/
+        ├── train/
+        └── val/
+</pre>
+        </div>
+
+        <div class="section">
+            <h2>Kod: Trenowanie i eksport modelu YOLO</h2>
+            <div class="explanation">
+                <b>model_generator_yolo.py</b> – Skrypt do trenowania modelu YOLO na własnych danych oraz eksportu do formatu .pt i ncnn.<br>
+                <ul>
+                    <li>Wczytuje bazowy model YOLO (nano, szybki wariant dla Raspberry Pi).</li>
+                    <li>Trenuje model na Twoim zbiorze danych opisanym w <code>data.yaml</code>.</li>
+                    <li>Eksportuje model do formatu <code>.pt</code> (PyTorch) oraz <code>ncnn</code> (szybkie uruchamianie na Pi).</li>
+                </ul>
+            </div>
+            <div class="code-title">Kod:</div>
+            <pre>
+from ultralytics import YOLO
+
+# Wczytaj bazowy model YOLO (nano wariant)
+model = YOLO('yolov8n.pt')  # Mozesz tez uzyc 'yolo11n.pt' dla YOLO11
+
+# Trening na wlasnym zbiorze danych
+model.train(
+    data='data.yaml',    # Sciezka do pliku konfiguracyjnego
+    epochs=50,           # Liczba epok
+    imgsz=640,           # Rozmiar obrazu (320/416/640; mniejszy = szybszy)
+    batch=16,            # Rozmiar batcha
+    project='runs/train',
+    name='defect_detector'
+)
+
+# Eksport do NCNN (na Raspberry Pi) oraz .pt (PyTorch)
+model.export(format='ncnn')  # Plik: defect_detector_ncnn_model
+model.export(format='pt')    # Plik: defect_detector.pt
+            </pre>
+            <div class="explanation">
+                <b>Wyjaśnienie:</b><br>
+                - <code>YOLO('yolov8n.pt')</code> ładuje szybki, lekki model YOLO.<br>
+                - <code>model.train(...)</code> uruchamia trening na Twoich danych.<br>
+                - <code>model.export(...)</code> pozwala uruchomić model na Raspberry Pi lub w PyTorch.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Kod: Detekcja w czasie rzeczywistym na Raspberry Pi</h2>
+            <div class="explanation">
+                <b>main_yolo.py</b> – Skrypt do uruchamiania detekcji na żywo z użyciem kamery Raspberry Pi.<br>
+                <ul>
+                    <li>Inicjalizuje kamerę i model YOLO.</li>
+                    <li>W pętli pobiera obraz, wykonuje detekcję i rysuje ramki.</li>
+                    <li>Obiekty bez defektów mają ramkę zieloną, defekty czerwoną.</li>
+                </ul>
+            </div>
+            <div class="code-title">Kod:</div>
+            <pre>
+import cv2
+from picamera2 import Picamera2
+from ultralytics import YOLO
+
+# Nazwy klas (zgodne z data.yaml)
+class_names = ["no_defected", "defected"]
+
+# Wczytaj wytrenowany model
+model = YOLO("defect_detector.pt")  # Lub NCNN, jesli uzywasz NCNN runtime
+
+# Inicjalizacja kamery Raspberry Pi
+picam2 = Picamera2()
+picam2.preview_configuration.main.size = (640, 480)
+picam2.preview_configuration.main.format = "RGB888"
+picam2.preview_configuration.align()
+picam2.configure("preview")
+picam2.start()
+
+print("Press Q in the preview window to exit.")
+while True:
+    frame = picam2.capture_array()
+    results = model(frame)
+    boxes = results[0].boxes
+    for box in boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0])  # Wspolrzedne ramki
+        cls_id = int(box.cls[0])                # Indeks klasy
+        conf = float(box.conf[0])               # Pewnosc
+        label = class_names[cls_id]
+
+        # Kolor ramki: czerwony dla defektu, zielony dla braku
+        if label == "defected":
+            color = (0, 0, 255)   # Czerwony
+            thickness = 3
+        else:
+            color = (0, 255, 0)   # Zielony
+            thickness = 2
+
+        # Rysuj ramke
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
+        # Rysuj etykiete
+        cv2.putText(frame, f"{label} ({conf:.2f})", (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+
+    cv2.imshow("YOLO Detection", frame)
+    if cv2.waitKey(1) & 0xFF in [ord('q'), ord('Q')]:
+        break
+
+picam2.stop()
+cv2.destroyAllWindows()
+            </pre>
+            <div class="explanation">
+                <b>Wyjaśnienie:</b><br>
+                - <code>picam2.capture_array()</code> pobiera obraz z kamery.<br>
+                - <code>results = model(frame)</code> wykonuje detekcję YOLO.<br>
+                - Każda wykryta ramka jest rysowana: zielona dla "no_defected", czerwona dla "defected".<br>
+                - W oknie pojawia się podgląd z narysowanymi ramkami i etykietami.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Przygotowanie danych i pliku <code>data.yaml</code></h2>
+            <div class="explanation">
+                YOLO wymaga, aby dane były w formacie detekcji obiektów:<br>
+                - Każdy obraz ma odpowiadający plik <code>.txt</code> z ramkami w YOLO formacie.<br>
+                - <b>Przykładowy plik <code>data.yaml</code>:</b>
+            </div>
+            <pre>
+train: ./dataset/images/train
+val: ./dataset/images/val
+names:
+  0: no_defected
+  1: defected
+            </pre>
+        </div>
+
+        <div class="section">
+            <h2>Instrukcja uruchomienia</h2>
+            <ol>
+                <li>Zainstaluj zależności:
+                    <pre>pip install ultralytics opencv-python picamera2</pre>
+                </li>
+                <li>Wytrenuj model:
+                    <pre>python model_generator_yolo.py</pre>
+                </li>
+                <li>Uruchom detekcję na żywo:
+                    <pre>python main_yolo.py</pre>
+                </li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>Wymagania sprzętowe</h2>
+            <ul>
+                <li>Raspberry Pi 4 lub 5 (zalecane)</li>
+                <li>Kamera kompatybilna z Raspberry Pi (np. oficjalna kamera v2/v3)</li>
+                <li>System Raspberry Pi OS Bookworm 64-bit</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Licencja</h2>
+            <p>Projekt open-source, możesz dowolnie modyfikować i rozwijać.</p>
+        </div>
+
+        <div class="footer">
+            Inspiracje i dokumentacja: <a href="https://docs.ultralytics.com/guides/raspberry-pi/" target="_blank">Ultralytics YOLO na Raspberry Pi – oficjalny przewodnik</a>
+        </div>
+    </div>
+</body>
+</html>
